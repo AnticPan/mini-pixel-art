@@ -43,8 +43,6 @@ button:disabled { opacity: .5; cursor: default; }
 .tile a { font-size: 12px; color: var(--muted); }
 .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .top a { color: var(--muted); font-size: 13px; }
-pre { font-size: 12px; white-space: pre-wrap; margin: 8px 0 0; color: var(--muted); }
-.ok { color: var(--ok); } .bad { color: var(--bad); }
 </style>
 </head>
 <body>
@@ -68,10 +66,8 @@ pre { font-size: 12px; white-space: pre-wrap; margin: 8px 0 0; color: var(--mute
     </div>
     <div class="actions">
       <button id="go" data-i18n="go"></button>
-      <button id="test" class="secondary" data-i18n="test"></button>
       <span id="status">Loading…</span>
     </div>
-    <pre id="testout"></pre>
   </section>
 
   <section class="panel"><div id="grid"></div></section>
@@ -471,22 +467,20 @@ const $ = id => document.getElementById(id);
 const I18N = {
   en: { sub: "Text to 16×16 pixel-art sprites with a 4.35M-parameter diffusion model. Everything runs in this browser (WebGPU, CPU fallback); nothing is uploaded. Weights are int8, compute is fp32.",
         caption: "Caption (English; only words seen in training are known)", model: "Model", count: "Images", steps: "Steps", cfg: "Guidance", seed: "Seed",
-        tstop: "Stop grid at t = 0.05", cpu: "CPU only", go: "Generate", test: "Self-test vs PyTorch", png: "PNG",
+        tstop: "Stop grid at t = 0.05", cpu: "CPU only", go: "Generate", png: "PNG",
         s_p1: "S-P1 (1.9M, smallest)", m_p1: "M-P1 (4.35M, recommended)", l_p1: "L-P1 (8.75M, best quality)", m_p2: "M-P2 (patch 2, faster)",
         unk: w => `Not in vocabulary: ${w.join(", ")} (ignored). `, trunc: "More than 12 words; the rest are cut. ",
-        step: (s, S) => `Step ${s}/${S}…`, err: "Error: ", loadfail: "Failed to load: ", testing: "Testing…", dl: "Downloading model…",
+        step: (s, S) => `Step ${s}/${S}…`, err: "Error: ", loadfail: "Failed to load: ", dl: "Downloading model…",
         ready: g => g ? "Ready (WebGPU)" : "Ready (no WebGPU, using CPU; slower)",
-        done: (dev, n, sec, per, steps, cfg) => `${dev}: ${n} images in ${sec} s, ${per} ms each (${steps} steps, guidance ${cfg}${cfg !== 1 ? ", 2 passes per step" : ""})`,
-        fwd: (l, md) => `${l}: max abs error of one forward pass ${md}`, gen: (st, pct) => `; ${st}-step generation matches PyTorch on ${pct}% of pixels` },
+        done: (dev, n, sec, per, steps, cfg) => `${dev}: ${n} images in ${sec} s, ${per} ms each (${steps} steps, guidance ${cfg}${cfg !== 1 ? ", 2 passes per step" : ""})` },
   zh: { sub: "4.35M 参数的扩散模型，从文字生成 16×16 像素图。全部在本机浏览器里计算（WebGPU，没有时退回 CPU），不上传任何内容。权重为 int8，计算为 fp32。",
         caption: "描述（英文，训练里出现过的词才认识）", model: "模型", count: "张数", steps: "采样步数", cfg: "引导强度", seed: "随机种子",
-        tstop: "网格停在 t=0.05", cpu: "只用 CPU", go: "生成", test: "和 PyTorch 对拍", png: "下载 PNG",
+        tstop: "网格停在 t=0.05", cpu: "只用 CPU", go: "生成", png: "下载 PNG",
         s_p1: "S-P1（1.9M，最小）", m_p1: "M-P1（4.35M，推荐）", l_p1: "L-P1（8.75M，质量最好）", m_p2: "M-P2（patch 2，更快）",
         unk: w => `词表里没有：${w.join("、")}（按未知词处理）。`, trunc: "超过 12 个词，后面的会被截掉。",
-        step: (s, S) => `第 ${s}/${S} 步…`, err: "出错：", loadfail: "加载失败：", testing: "对拍中…", dl: "正在下载模型…",
+        step: (s, S) => `第 ${s}/${S} 步…`, err: "出错：", loadfail: "加载失败：", dl: "正在下载模型…",
         ready: g => g ? "就绪（WebGPU 可用）" : "就绪（没有 WebGPU，用 CPU，会慢一些）",
-        done: (dev, n, sec, per, steps, cfg) => `${dev}：${n} 张 ${sec} 秒，每张 ${per} ms（${steps} 步，引导 ${cfg}${cfg !== 1 ? "，每步 2 次前向" : ""}）`,
-        fwd: (l, md) => `${l}：单次前向最大绝对误差 ${md}`, gen: (st, pct) => `；${st} 步生成与 PyTorch 像素一致 ${pct}%` },
+        done: (dev, n, sec, per, steps, cfg) => `${dev}：${n} 张 ${sec} 秒，每张 ${per} ms（${steps} 步，引导 ${cfg}${cfg !== 1 ? "，每步 2 次前向" : ""}）` },
 };
 let LANG = "en";
 try { LANG = localStorage.getItem("lang") || ((navigator.language || "").startsWith("zh") ? "zh" : "en"); } catch (e) { LANG = (navigator.language || "").startsWith("zh") ? "zh" : "en"; }
@@ -539,29 +533,6 @@ async function run() {
   } catch (e) { $("status").textContent = T("err") + e.message; console.error(e); }
   $("go").disabled = false;
 }
-async function selfTest() {
-  $("test").disabled = true; $("testout").textContent = T("testing");
-  try {
-    const name = $("model").value, [m, gpu] = await getModel(name), TV = await assetJSON(name + "-test.json"), n = TV.ids.length;
-    const noises = []; for (let b = 0; b < n; b++) noises.push(Float32Array.from(TV.noise.slice(b * 1024, (b + 1) * 1024)));
-    const lines = [], oks = [];
-    for (const [label, g] of [["CPU", null]].concat(gpu ? [["WebGPU", gpu]] : [])) {
-      const out = await forward(m, g, noises, TV.t, TV.ids.map(ids => textTokens(m, ids)));
-      let md = 0; out.forEach((x, b) => x.forEach((v, i) => { md = Math.max(md, Math.abs(v - TV.x_half[b * 1024 + i])); }));
-      let ok = md < 1e-3;
-      if (g || !gpu) {                    // 有 WebGPU 时 CPU 只对拍单次前向（CPU 跑完整生成要近一分钟）
-        const toks = await generate(m, g, TV.ids, noises, TV.steps, TV.cfg, TV.cfg_alpha ?? TV.cfg, 0);
-        let same = 0; toks.forEach((tk, b) => tk.forEach((v, i) => { same += v === TV.tokens[b][i]; }));
-        ok = ok && same / (256 * n) >= 0.95;
-        lines.push(T("fwd")(label, md.toExponential(2)) + T("gen")(TV.steps, (100 * same / (256 * n)).toFixed(1)));
-      } else lines.push(T("fwd")(label, md.toExponential(2)));
-      oks.push(ok);
-    }
-    $("testout").innerHTML = lines.map((l, k) => `<span class="${oks[k] ? "ok" : "bad"}">${l}</span>`).join("\n");
-  } catch (e) { $("testout").textContent = T("err") + e.message; console.error(e); }
-  $("test").disabled = false;
-}
-
 (async function init() {
   try {
     VOCAB = await assetJSON("vocab.json");
@@ -575,7 +546,7 @@ async function selfTest() {
     $("caption").addEventListener("input", checkCaption);
     $("model").addEventListener("change", () => { checkCaption(); getModel($("model").value).then(() => { $("status").textContent = T("ready")(!!navigator.gpu); }, e => { $("status").textContent = T("loadfail") + e.message; }); });
     $("caption").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
-    $("go").onclick = run; $("test").onclick = selfTest;
+    $("go").onclick = run;
     $("lang").onclick = () => { LANG = LANG === "zh" ? "en" : "zh"; try { localStorage.setItem("lang", LANG); } catch (e) {} applyLang(); checkCaption(); $("status").textContent = T("ready")(!!navigator.gpu); };
     const gh = location.hostname.match(/^([^.]+)\.github\.io$/);
     $("repo").href = gh ? `https://github.com/${gh[1]}/${location.pathname.split("/")[1] || "mini-pixel-art"}` : "https://github.com/";
