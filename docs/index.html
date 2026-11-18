@@ -61,7 +61,6 @@ button:disabled { opacity: .5; cursor: default; }
       <div><label for="steps" data-i18n="steps"></label><input id="steps" type="number" min="1" max="100" value="16"></div>
       <div><label for="cfg" data-i18n="cfg"></label><input id="cfg" type="number" min="1" max="6" step="0.5" value="1.5"></div>
       <div><label for="seed" data-i18n="seed"></label><input id="seed" type="number" value="1"></div>
-      <div><label class="check"><input id="tstop" type="checkbox" checked> <span data-i18n="tstop"></span></label></div>
       <div><label class="check"><input id="forcecpu" type="checkbox"> <span data-i18n="cpu"></span></label></div>
     </div>
     <div class="actions">
@@ -467,7 +466,7 @@ const $ = id => document.getElementById(id);
 const I18N = {
   en: { sub: "Text to 16×16 pixel-art sprites with a 4.35M-parameter diffusion model. Everything runs in this browser (WebGPU, CPU fallback); nothing is uploaded. Weights are int8, compute is fp32.",
         caption: "Caption (English; only words seen in training are known)", model: "Model", count: "Images", steps: "Steps", cfg: "Guidance", seed: "Seed",
-        tstop: "Stop grid at t = 0.05", cpu: "CPU only", go: "Generate", png: "PNG",
+        cpu: "CPU only", go: "Generate", png: "PNG",
         s_p1: "S-P1 (1.9M, smallest)", m_p1: "M-P1 (4.35M, recommended)", l_p1: "L-P1 (8.75M, best quality)", m_p2: "M-P2 (patch 2, faster)",
         unk: w => `Not in vocabulary: ${w.join(", ")} (ignored). `, trunc: "More than 12 words; the rest are cut. ",
         step: (s, S) => `Step ${s}/${S}…`, err: "Error: ", loadfail: "Failed to load: ", dl: "Downloading model…",
@@ -475,7 +474,7 @@ const I18N = {
         done: (dev, n, sec, per, steps, cfg) => `${dev}: ${n} images in ${sec} s, ${per} ms each (${steps} steps, guidance ${cfg}${cfg !== 1 ? ", 2 passes per step" : ""})` },
   zh: { sub: "4.35M 参数的扩散模型，从文字生成 16×16 像素图。全部在本机浏览器里计算（WebGPU，没有时退回 CPU），不上传任何内容。权重为 int8，计算为 fp32。",
         caption: "描述（英文，训练里出现过的词才认识）", model: "模型", count: "张数", steps: "采样步数", cfg: "引导强度", seed: "随机种子",
-        tstop: "网格停在 t=0.05", cpu: "只用 CPU", go: "生成", png: "下载 PNG",
+        cpu: "只用 CPU", go: "生成", png: "下载 PNG",
         s_p1: "S-P1（1.9M，最小）", m_p1: "M-P1（4.35M，推荐）", l_p1: "L-P1（8.75M，质量最好）", m_p2: "M-P2（patch 2，更快）",
         unk: w => `词表里没有：${w.join("、")}（按未知词处理）。`, trunc: "超过 12 个词，后面的会被截掉。",
         step: (s, S) => `第 ${s}/${S} 步…`, err: "出错：", loadfail: "加载失败：", dl: "正在下载模型…",
@@ -522,7 +521,7 @@ async function run() {
   try {
     const name = $("model").value, [m, gpu] = await getModel(name);
     const n = Math.max(1, Math.min(32, +$("count").value | 0)), steps = Math.max(1, Math.min(100, +$("steps").value | 0));
-    const cfg = +$("cfg").value || 1, seed = +$("seed").value | 0, tStop = $("tstop").checked ? 0.05 : 0;
+    const cfg = +$("cfg").value || 1, seed = +$("seed").value | 0, tStop = 0.05;   // 发布的模型在 t < 0.05 有偏差，网格固定停在 0.05（方案第 13 节）
     const { ids } = tokenize($("caption").value, m.textLen);
     const t0 = performance.now();
     const toks = await generate(m, gpu, new Array(n).fill(ids), gaussNoise(seed, n), steps, cfg, alphaCfg(m, cfg), tStop,
