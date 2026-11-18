@@ -6,7 +6,7 @@ Tiny text-to-image models (1.9M–8.8M parameters) for 16×16 pixel-art sprites.
 
 *M-P1, 16 steps, seeds 0–7. Captions top to bottom: red potion bottle · side-view knight with sword · green slime · golden key · wooden treasure chest · blue mage hat. Not cherry-picked.*
 
-**[Try it in your browser →](https://anticpan.github.io/mini-pixel-art/)** (WebGPU, falls back to CPU; nothing is uploaded)
+**[Try it in your browser →](https://anticpan.github.io/mini-pixel-art/)** (WebGPU, falls back to CPU; captions and images stay on your device; the page counts visits with cookie-free GoatCounter)
 
 Code: [github.com/AnticPan/mini-pixel-art](https://github.com/AnticPan/mini-pixel-art) · Weights: [huggingface.co/AnticPan/mini-pixel-art](https://huggingface.co/AnticPan/mini-pixel-art)
 

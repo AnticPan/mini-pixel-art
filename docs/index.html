@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mini-pixel-art</title>
+<!-- 访问统计（GoatCounter，不用 cookie）。只记页面访问和"生成"事件（模型名），不记描述和图片 -->
+<script data-goatcounter="https://anticpan.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <style>
 :root {
   --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #dedcd6;
@@ -464,7 +466,7 @@ function gaussNoise(seed, n) {
 // ---------- 界面 ----------
 const $ = id => document.getElementById(id);
 const I18N = {
-  en: { sub: "Text to 16×16 pixel-art sprites with a 4.35M-parameter diffusion model. Everything runs in this browser (WebGPU, CPU fallback); nothing is uploaded. Weights are int8, compute is fp32.",
+  en: { sub: "Text to 16×16 pixel-art sprites with tiny diffusion models (1.9M–8.8M parameters). Generation runs entirely in this browser (WebGPU, CPU fallback): your captions and images never leave your device. The page counts visits and generations (model name only) with cookie-free GoatCounter.",
         caption: "Caption (English; only words seen in training are known)", model: "Model", count: "Images", steps: "Steps", cfg: "Guidance", seed: "Seed (0 = random)",
         cpu: "CPU only", go: "Generate", png: "PNG",
         s_p1: "S-P1 (1.9M, smallest)", m_p1: "M-P1 (4.35M, recommended)", l_p1: "L-P1 (8.75M, best quality)", m_p2: "M-P2 (patch 2, faster)",
@@ -472,7 +474,7 @@ const I18N = {
         step: (s, S) => `Step ${s}/${S}…`, err: "Error: ", loadfail: "Failed to load: ", dl: "Downloading model…",
         ready: g => g ? "Ready (WebGPU)" : "Ready (no WebGPU, using CPU; slower)",
         done: (dev, n, sec, per, steps, cfg, seed) => `${dev}: ${n} images in ${sec} s, ${per} ms each (${steps} steps, guidance ${cfg}, seed ${seed})` },
-  zh: { sub: "4.35M 参数的扩散模型，从文字生成 16×16 像素图。全部在本机浏览器里计算（WebGPU，没有时退回 CPU），不上传任何内容。权重为 int8，计算为 fp32。",
+  zh: { sub: "用很小的扩散模型（1.9M–8.8M 参数）从文字生成 16×16 像素图。生成全部在本机浏览器里完成（WebGPU，没有时退回 CPU），你输入的描述和生成的图片都不会离开本机。页面用不带 cookie 的 GoatCounter 统计访问次数和生成次数（只记模型名）。",
         caption: "描述（英文，训练里出现过的词才认识）", model: "模型", count: "张数", steps: "采样步数", cfg: "引导强度", seed: "随机种子（0 = 每次随机）",
         cpu: "只用 CPU", go: "生成", png: "下载 PNG",
         s_p1: "S-P1（1.9M，最小）", m_p1: "M-P1（4.35M，推荐）", l_p1: "L-P1（8.75M，质量最好）", m_p2: "M-P2（patch 2，更快）",
@@ -530,6 +532,7 @@ async function run() {
     const ms = performance.now() - t0;
     $("grid").replaceChildren(...toks.map((t, i) => drawTile(t, `${name}-seed${seed}-${i}`)));
     $("status").textContent = T("done")(gpu ? "WebGPU" : "CPU", n, (ms / 1000).toFixed(2), (ms / n).toFixed(0), steps, cfg, seed);
+    try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: "generate/" + name, title: "Generate " + name, event: true }); } catch (e) {}
   } catch (e) { $("status").textContent = T("err") + e.message; console.error(e); }
   $("go").disabled = false;
 }
