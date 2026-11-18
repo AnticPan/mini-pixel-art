@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mini-pixel-art</title>
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #dedcd6;
+  --accent: #2f6f5e; --accent-ink: #ffffff; --warn: #a8540a; --ok: #2f6f5e; --bad: #b3261e;
+  --check-a: #e9e7e2; --check-b: #f7f6f3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181a; --panel: #212226; --ink: #ececee; --muted: #9a9aa2; --line: #34353a;
+    --accent: #6cc3a8; --accent-ink: #10231d; --warn: #e3a35a; --ok: #6cc3a8; --bad: #f08b84;
+    --check-a: #2a2b2f; --check-b: #323338;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, "PingFang SC", "Noto Sans SC", system-ui, sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type=text], input[type=number], select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 12px; }
+.check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); margin-top: 22px; }
+button { padding: 9px 18px; border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 600; cursor: pointer; }
+button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
+button:disabled { opacity: .5; cursor: default; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { font-size: 12px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; font-weight: 400; }
+#status { font-size: 13px; color: var(--muted); }
+#warn { font-size: 13px; color: var(--warn); margin-top: 8px; min-height: 1em; }
+#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 12px; }
+.tile { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.tile canvas { width: 128px; height: 128px; image-rendering: pixelated; border-radius: 6px; border: 1px solid var(--line);
+  background-color: var(--check-b); background-image: linear-gradient(45deg, var(--check-a) 25%, transparent 25%, transparent 75%, var(--check-a) 75%), linear-gradient(45deg, var(--check-a) 25%, transparent 25%, transparent 75%, var(--check-a) 75%);
+  background-size: 16px 16px; background-position: 0 0, 8px 8px; }
+.tile a { font-size: 12px; color: var(--muted); }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.top a { color: var(--muted); font-size: 13px; }
+pre { font-size: 12px; white-space: pre-wrap; margin: 8px 0 0; color: var(--muted); }
+.ok { color: var(--ok); } .bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><h1>mini-pixel-art</h1><span><a id="repo" href="https://github.com/" target="_blank" rel="noopener">GitHub</a> · <button id="lang" class="chip" type="button">中文</button></span></div>
+  <p class="sub" data-i18n="sub"></p>
+
+  <section class="panel">
+    <label for="caption" data-i18n="caption"></label>
+    <input id="caption" type="text" value="red potion bottle" autocomplete="off">
+    <div class="chips" id="examples"></div>
+    <div id="warn"></div>
+    <div class="row">
+      <div><label for="model" data-i18n="model"></label><select id="model"></select></div>
+      <div><label for="count" data-i18n="count"></label><input id="count" type="number" min="1" max="32" value="8"></div>
+      <div><label for="steps" data-i18n="steps"></label><input id="steps" type="number" min="1" max="100" value="16"></div>
+      <div><label for="cfg" data-i18n="cfg"></label><input id="cfg" type="number" min="1" max="6" step="0.5" value="1.5"></div>
+      <div><label for="seed" data-i18n="seed"></label><input id="seed" type="number" value="1"></div>
+      <div><label class="check"><input id="tstop" type="checkbox" checked> <span data-i18n="tstop"></span></label></div>
+      <div><label class="check"><input id="forcecpu" type="checkbox"> <span data-i18n="cpu"></span></label></div>
+    </div>
+    <div class="actions">
+      <button id="go" data-i18n="go"></button>
+      <button id="test" class="secondary" data-i18n="test"></button>
+      <span id="status">Loading…</span>
+    </div>
+    <pre id="testout"></pre>
+  </section>
+
+  <section class="panel"><div id="grid"></div></section>
+</main>
+
+<script>
+"use strict";
+// ---------- 资源 ----------
+// 两种打包（web/build.py）：单文件版把权重、词表、调色板、测试向量以 base64 内嵌到 window.EMBED；
+// 站点版（--split）把它们放在 models/ 下，用到哪个模型才下载哪个（models/models.json 列出有哪些模型）。
+const b64 = s => { const bin = atob(s), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a.buffer; };
+async function assetBin(name) {
+  if (window.EMBED) { if (!(name in window.EMBED)) throw new Error("missing embedded asset " + name); return b64(window.EMBED[name]); }
+  const r = await fetch("models/" + name);
+  if (!r.ok) throw new Error(`models/${name}: HTTP ${r.status}`);
+  return r.arrayBuffer();
+}
+const assetJSON = async name => JSON.parse(new TextDecoder().decode(await assetBin(name)));
+const TEXT_LEN = 12;
+
+const PAD = 0, UNK = 1, NULL = 2;
+let VOCAB, PALETTE;          // PALETTE: Float32Array [4096*3]，[-1,1]，对应索引 1..4096
+let PAL_RGB;                 // Uint8Array [4097*3]
+
+function tokenize(caption, textLen) {
+  const words = caption.toLowerCase().match(/[a-z0-9]+(?:[-'][a-z0-9]+)*/g) || [];
+  const ids = words.map(w => (w in VOCAB ? VOCAB[w] : UNK)).slice(0, textLen);
+  while (ids.length < textLen) ids.push(PAD);
+  return { ids, unknown: words.filter(w => !(w in VOCAB)), truncated: words.length > textLen };
+}
+const nullIds = n => { const a = new Array(n).fill(PAD); a[0] = NULL; return a; };
+
+// ---------- 权重 ----------
+async function loadModel(name) {
+  const meta = await assetJSON(name + ".json"), buf = await assetBin(name + ".bin");
+  const raw = {}, P = {};
+  for (const t of meta.tensors) raw[t.name] = t;
+  for (const t of meta.tensors) {
+    if (t.name.endsWith(".scale")) continue;
+    const n = t.shape.reduce((a, b) => a * b, 1);
+    if (t.dtype === "int8") {
+      const q = new Int8Array(buf, t.offset, n), s = raw[t.name + ".scale"];
+      const sc = new Float32Array(buf, s.offset, t.shape[0]), cols = n / t.shape[0], w = new Float32Array(n);
+      for (let r = 0; r < t.shape[0]; r++) for (let c = 0; c < cols; c++) w[r * cols + c] = q[r * cols + c] * sc[r];
+      P[t.name] = w;
+    } else P[t.name] = new Float32Array(buf, t.offset, n).slice();
+  }
+  const c = meta.config;
+  const m = { meta, P, D: c.width, depth: c.depth, H: c.heads, p: c.patch, G: 16 / c.patch, mlp: c.mlp_ratio, textLen: c.text_len };
+  m.pd = 4 * m.p * m.p; m.Npix = m.G * m.G; m.N = 1 + m.textLen + m.Npix; m.hd = m.D / m.H;
+  m.pixPos = sincos2d(m.G, m.D);
+  return m;
+}
+
+function sincos2d(grid, dim) {
+  const q = dim / 4, out = new Float32Array(grid * grid * dim);
+  for (let y = 0; y < grid; y++) for (let x = 0; x < grid; x++) {
+    const r = (y * grid + x) * dim;
+    for (let i = 0; i < q; i++) {
+      const om = 1 / Math.pow(10000, i / q);
+      out[r + i] = Math.sin(y * om); out[r + q + i] = Math.cos(y * om);
+      out[r + 2 * q + i] = Math.sin(x * om); out[r + 3 * q + i] = Math.cos(x * om);
+    }
+  }
+  return out;
+}
+
+// ---------- CPU 基本算子 ----------
+function linear(X, rows, K, W, b, M, out, accumulate, relu) {
+  const Y = out || new Float32Array(rows * M);
+  for (let r = 0; r < rows; r++) {
+    const xo = r * K, yo = r * M;
+    for (let o = 0; o < M; o++) {
+      const wo = o * K; let s = b ? b[o] : 0;
+      for (let k = 0; k < K; k++) s += X[xo + k] * W[wo + k];
+      if (relu && s < 0) s = 0;
+      Y[yo + o] = accumulate ? Y[yo + o] + s : s;
+    }
+  }
+  return Y;
+}
+function layerNorm(X, rows, D, g, b, out) {
+  const Y = out || new Float32Array(rows * D);
+  for (let r = 0; r < rows; r++) {
+    const o = r * D; let mu = 0, v = 0;
+    for (let i = 0; i < D; i++) mu += X[o + i];
+    mu /= D;
+    for (let i = 0; i < D; i++) { const d = X[o + i] - mu; v += d * d; }
+    const inv = 1 / Math.sqrt(v / D + 1e-5);
+    for (let i = 0; i < D; i++) Y[o + i] = (X[o + i] - mu) * inv * g[i] + b[i];
+  }
+  return Y;
+}
+const silu = v => v / (1 + Math.exp(-v));
+
+// ---------- 嵌入（CPU，量很小） ----------
+function textTokens(m, ids) {             // [textLen, D]
+  const P = m.P, td = m.meta.config.text_dim, E = new Float32Array(m.textLen * td);
+  ids.forEach((id, i) => E.set(P["text_emb.weight"].subarray(id * td, id * td + td), i * td));
+  const T = linear(E, m.textLen, td, P["text_proj.weight"], P["text_proj.bias"], m.D);
+  for (let i = 0; i < T.length; i++) T[i] += P["text_pos"][i];
+  return T;
+}
+function timeToken(m, t) {                // [D]
+  const D = m.D, half = D / 2, f = new Float32Array(D);
+  for (let i = 0; i < half; i++) { const a = t * 1000 * Math.exp(-Math.log(10000) * i / half); f[i] = Math.sin(a); f[half + i] = Math.cos(a); }
+  const h = linear(f, 1, D, m.P["time_mlp.0.0.weight"], m.P["time_mlp.0.0.bias"], D);
+  for (let i = 0; i < D; i++) h[i] = silu(h[i]);
+  return linear(h, 1, D, m.P["time_mlp.0.2.weight"], m.P["time_mlp.0.2.bias"], D);
+}
+function patchify(m, z) {                 // z [4*256] -> [Npix, pd]
+  const { p, G, pd } = m, out = new Float32Array(m.Npix * pd);
+  for (let gy = 0; gy < G; gy++) for (let gx = 0; gx < G; gx++) for (let c = 0; c < 4; c++) for (let py = 0; py < p; py++) for (let px = 0; px < p; px++)
+    out[(gy * G + gx) * pd + c * p * p + py * p + px] = z[c * 256 + (gy * p + py) * 16 + gx * p + px];
+  return out;
+}
+function unpatchifyInto(m, y, out) {      // y [Npix, pd] -> out [4*256]
+  const { p, G, pd } = m;
+  for (let gy = 0; gy < G; gy++) for (let gx = 0; gx < G; gx++) for (let c = 0; c < 4; c++) for (let py = 0; py < p; py++) for (let px = 0; px < p; px++)
+    out[c * 256 + (gy * p + py) * 16 + gx * p + px] = y[(gy * G + gx) * pd + c * p * p + py * p + px];
+}
+// 组装 B 个样本的输入序列 [B*N, D]
+function assemble(m, zs, t, txts) {
+  const { D, N, Npix } = m, B = zs.length, X = new Float32Array(B * N * D), tt = timeToken(m, t);
+  for (let b = 0; b < B; b++) {
+    const o = b * N * D;
+    X.set(tt, o);
+    X.set(txts[b], o + D);
+    const pix = linear(patchify(m, zs[b]), Npix, m.pd, m.P["pix_in.weight"], m.P["pix_in.bias"], D);
+    for (let i = 0; i < Npix * D; i++) pix[i] += m.pixPos[i];
+    X.set(pix, o + (1 + m.textLen) * D);
+  }
+  return X;
+}
+// 输出头（CPU）：norm_out + pix_out，只取像素 token
+function head(m, X, B) {
+  const { D, N, Npix, pd } = m, outs = [];
+  for (let b = 0; b < B; b++) {
+    const sl = X.subarray((b * N + 1 + m.textLen) * D, (b + 1) * N * D);
+    const h = layerNorm(sl, Npix, D, m.P["norm_out.weight"], m.P["norm_out.bias"]);
+    const y = linear(h, Npix, D, m.P["pix_out.weight"], m.P["pix_out.bias"], pd);
+    const z = new Float32Array(1024); unpatchifyInto(m, y, z); outs.push(z);
+  }
+  return outs;
+}
+
+// ---------- 主干：CPU 版 ----------
+function blocksCPU(m, X, B) {
+  const { D, N, H, hd, P } = m, R = B * N, F = m.mlp * D;
+  const h = new Float32Array(R * D), qkv = new Float32Array(R * 3 * D), att = new Float32Array(R * D), f = new Float32Array(R * F);
+  const sc = 1 / Math.sqrt(hd), s = new Float32Array(N);
+  for (let l = 0; l < m.depth; l++) {
+    const pre = "blocks." + l + ".";
+    layerNorm(X, R, D, P[pre + "norm1.weight"], P[pre + "norm1.bias"], h);
+    linear(h, R, D, P[pre + "qkv.weight"], P[pre + "qkv.bias"], 3 * D, qkv);
+    for (let b = 0; b < B; b++) for (let hh = 0; hh < H; hh++) for (let i = 0; i < N; i++) {
+      const qo = (b * N + i) * 3 * D + hh * hd; let mx = -Infinity;
+      for (let j = 0; j < N; j++) {
+        const ko = (b * N + j) * 3 * D + D + hh * hd; let d = 0;
+        for (let c = 0; c < hd; c++) d += qkv[qo + c] * qkv[ko + c];
+        s[j] = d * sc; if (s[j] > mx) mx = s[j];
+      }
+      let sum = 0; for (let j = 0; j < N; j++) { s[j] = Math.exp(s[j] - mx); sum += s[j]; }
+      const oo = (b * N + i) * D + hh * hd;
+      for (let c = 0; c < hd; c++) att[oo + c] = 0;
+      for (let j = 0; j < N; j++) { const vo = (b * N + j) * 3 * D + 2 * D + hh * hd, w = s[j] / sum; for (let c = 0; c < hd; c++) att[oo + c] += w * qkv[vo + c]; }
+    }
+    linear(att, R, D, P[pre + "proj.weight"], P[pre + "proj.bias"], D, X, true);
+    layerNorm(X, R, D, P[pre + "norm2.weight"], P[pre + "norm2.bias"], h);
+    linear(h, R, D, P[pre + "fc1.weight"], P[pre + "fc1.bias"], F, f, false, true);
+    linear(f, R, F, P[pre + "fc2.weight"], P[pre + "fc2.bias"], D, X, true);
+  }
+  return X;
+}
+
+// ---------- 主干：WebGPU 版 ----------
+// 通用批量矩阵乘：Y[z][r,o] = scale·Σ_k X[z][r,k]·W[z][o,k]（flags&8 时 W 按 [k,o] 取），可加偏置、ReLU、累加。
+// z = b·H + h，各操作数的起点 = 常数偏移 + b·(…B) + h·(…H)。每个工作组算 64×64 的输出块，每个线程 4×4。
+const WGSL_MM = `
+struct P { rows: u32, K: u32, M: u32, flags: u32, sx: u32, sw: u32, sy: u32, H: u32,
+           xO: u32, xB: u32, xH: u32, wO: u32, wB: u32, wH: u32, yO: u32, yB: u32, yH: u32, scale: f32, p0: u32, p1: u32 };
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(1) var<storage, read> X: array<f32>;
+@group(0) @binding(2) var<storage, read> W: array<f32>;
+@group(0) @binding(3) var<storage, read> Bv: array<f32>;
+@group(0) @binding(4) var<storage, read_write> Y: array<f32>;
+var<workgroup> As: array<f32, 1024>;
+var<workgroup> Bs: array<f32, 1024>;
+@compute @workgroup_size(16, 16)
+fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_id) l: vec3u) {
+  let b = wg.z / p.H; let h = wg.z % p.H;
+  let xo = p.xO + b * p.xB + h * p.xH; let wo = p.wO + b * p.wB + h * p.wH; let yo = p.yO + b * p.yB + h * p.yH;
+  let r0 = wg.y * 64u; let o0 = wg.x * 64u; let tid = l.y * 16u + l.x;
+  let tw = (p.flags & 8u) != 0u;
+  var acc: array<f32, 16>;
+  for (var k0 = 0u; k0 < p.K; k0 += 16u) {
+    for (var e = 0u; e < 4u; e++) {
+      let idx = tid + e * 256u; let rr = idx / 16u; let kk = idx % 16u; let gk = k0 + kk;
+      var v = 0.0; let gr = r0 + rr; if (gr < p.rows && gk < p.K) { v = X[xo + gr * p.sx + gk]; }
+      As[idx] = v;
+      var w = 0.0; let gc = o0 + rr;
+      if (gc < p.M && gk < p.K) { if (tw) { w = W[wo + gk * p.sw + gc]; } else { w = W[wo + gc * p.sw + gk]; } }
+      Bs[idx] = w;
+    }
+    workgroupBarrier();
+    for (var kk = 0u; kk < 16u; kk++) {
+      let a0 = As[(l.y * 4u) * 16u + kk]; let a1 = As[(l.y * 4u + 1u) * 16u + kk];
+      let a2 = As[(l.y * 4u + 2u) * 16u + kk]; let a3 = As[(l.y * 4u + 3u) * 16u + kk];
+      let b0 = Bs[(l.x * 4u) * 16u + kk]; let b1 = Bs[(l.x * 4u + 1u) * 16u + kk];
+      let b2 = Bs[(l.x * 4u + 2u) * 16u + kk]; let b3 = Bs[(l.x * 4u + 3u) * 16u + kk];
+      acc[0] += a0 * b0; acc[1] += a0 * b1; acc[2] += a0 * b2; acc[3] += a0 * b3;
+      acc[4] += a1 * b0; acc[5] += a1 * b1; acc[6] += a1 * b2; acc[7] += a1 * b3;
+      acc[8] += a2 * b0; acc[9] += a2 * b1; acc[10] += a2 * b2; acc[11] += a2 * b3;
+      acc[12] += a3 * b0; acc[13] += a3 * b1; acc[14] += a3 * b2; acc[15] += a3 * b3;
+    }
+    workgroupBarrier();
+  }
+  for (var i = 0u; i < 4u; i++) {
+    let r = r0 + l.y * 4u + i;
+    if (r >= p.rows) { continue; }
+    for (var j = 0u; j < 4u; j++) {
+      let o = o0 + l.x * 4u + j;
+      if (o >= p.M) { continue; }
+      var y = acc[i * 4u + j] * p.scale;
+      if ((p.flags & 4u) != 0u) { y += Bv[o]; }
+      if ((p.flags & 1u) != 0u) { y = max(y, 0.0); }
+      let idx = yo + r * p.sy + o;
+      if ((p.flags & 2u) != 0u) { Y[idx] = Y[idx] + y; } else { Y[idx] = y; }
+    }
+  }
+}`;
+// 按行 softmax（原地），一行一个线程。
+const WGSL_SOFTMAX = `
+struct P { rows: u32, N: u32, a: u32, b: u32 };
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(4) var<storage, read_write> S: array<f32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) g: vec3u) {
+  let r = g.y * 65535u * 64u + g.x; if (r >= p.rows) { return; }
+  let o = r * p.N;
+  var m = -1e30; for (var j = 0u; j < p.N; j++) { m = max(m, S[o + j]); }
+  var s = 0.0; for (var j = 0u; j < p.N; j++) { let e = exp(S[o + j] - m); S[o + j] = e; s += e; }
+  let inv = 1.0 / s; for (var j = 0u; j < p.N; j++) { S[o + j] = S[o + j] * inv; }
+}`;
+const WGSL_LN = `
+struct P { rows: u32, D: u32, a: u32, b: u32 };
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(1) var<storage, read> X: array<f32>;
+@group(0) @binding(2) var<storage, read> G: array<f32>;
+@group(0) @binding(3) var<storage, read> Bt: array<f32>;
+@group(0) @binding(4) var<storage, read_write> Y: array<f32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) g: vec3u) {
+  let r = g.x; if (r >= p.rows) { return; }
+  let o = r * p.D;
+  var mu = 0.0; for (var i = 0u; i < p.D; i++) { mu += X[o + i]; }
+  mu = mu / f32(p.D);
+  var v = 0.0; for (var i = 0u; i < p.D; i++) { let d = X[o + i] - mu; v += d * d; }
+  let inv = 1.0 / sqrt(v / f32(p.D) + 1e-5);
+  for (var i = 0u; i < p.D; i++) { Y[o + i] = (X[o + i] - mu) * inv * G[i] + Bt[i]; }
+}`;
+class GPUBackbone {
+  static async create(m) {
+    if (!navigator.gpu) return null;
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) return null;
+    const dev = await adapter.requestDevice({ requiredLimits: { maxStorageBufferBindingSize: Math.min(adapter.limits.maxStorageBufferBindingSize, 1 << 30), maxBufferSize: Math.min(adapter.limits.maxBufferSize, 1 << 30) } });
+    return new GPUBackbone(dev, m);
+  }
+  constructor(dev, m) {
+    this.dev = dev; this.m = m; this.cache = new Map();
+    const mk = code => dev.createComputePipeline({ layout: "auto", compute: { module: dev.createShaderModule({ code }), entryPoint: "main" } });
+    this.pMM = mk(WGSL_MM); this.pLN = mk(WGSL_LN); this.pSM = mk(WGSL_SOFTMAX);
+    this.dummy = this.buf(new Float32Array(4), GPUBufferUsage.STORAGE);
+    this.W = {};
+    for (const [k, v] of Object.entries(m.P)) if (k.startsWith("blocks.")) this.W[k] = this.buf(v, GPUBufferUsage.STORAGE);
+  }
+  buf(data, usage) {
+    const b = this.dev.createBuffer({ size: Math.max(16, data.byteLength), usage: usage | GPUBufferUsage.COPY_DST });
+    this.dev.queue.writeBuffer(b, 0, data); return b;
+  }
+  uni(a) { return this.buf(new Uint32Array(a), GPUBufferUsage.UNIFORM); }
+  plan(B) {                       // 每种 batch 大小建一次缓冲和 bind group
+    if (this.cache.has(B)) return this.cache.get(B);
+    const m = this.m, { D, N, H, hd } = m, R = B * N, F = m.mlp * D, dev = this.dev, S = GPUBufferUsage.STORAGE;
+    const mkb = n => dev.createBuffer({ size: n * 4, usage: S | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    const x = mkb(R * D), h = mkb(R * D), qkv = mkb(R * 3 * D), att = mkb(R * D), f = mkb(R * F), sc = mkb(B * H * N * N);
+    const read = dev.createBuffer({ size: R * D * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const bg = (pipe, entries) => dev.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: entries.map(([binding, buffer]) => ({ binding, resource: { buffer } })) });
+    // mm(X, W, bias, Y, 形状与步长)
+    const mm = (X, W, bias, Y, o) => {
+      const u = new ArrayBuffer(80), U = new Uint32Array(u), Fv = new Float32Array(u);
+      const flags = (o.relu ? 1 : 0) | (o.acc ? 2 : 0) | (bias ? 4 : 0) | (o.tw ? 8 : 0);
+      U.set([o.rows, o.K, o.M, flags, o.sx, o.sw, o.sy, o.H || 1, o.xO || 0, o.xB || 0, o.xH || 0, o.wO || 0, o.wB || 0, o.wH || 0, o.yO || 0, o.yB || 0, o.yH || 0]);
+      Fv[17] = o.scale || 1;
+      return { pipe: this.pMM, bg: bg(this.pMM, [[0, this.buf(u, GPUBufferUsage.UNIFORM)], [1, X], [2, W], [3, bias || this.dummy], [4, Y]]),
+               wg: [Math.ceil(o.M / 64), Math.ceil(o.rows / 64), o.Z || 1] };
+    };
+    const lin = (X, W, b, Y, K, M, extra) => mm(X, W, b, Y, { rows: R, K, M, sx: K, sw: K, sy: M, ...extra });
+    const ln = (X, g, b, Y) => ({ pipe: this.pLN, bg: bg(this.pLN, [[0, this.uni([R, D, 0, 0])], [1, X], [2, g], [3, b], [4, Y]]), wg: [Math.ceil(R / 64), 1, 1] });
+    const smRows = B * H * N;
+    const softmax = { pipe: this.pSM, bg: bg(this.pSM, [[0, this.uni([smRows, N, 0, 0])], [4, sc]]), wg: [Math.min(65535, Math.ceil(smRows / 64)), Math.ceil(smRows / 64 / 65535), 1] };
+    // 注意力：S = (Q·Kᵀ)/√hd → softmax → O = S·V
+    const qk = mm(qkv, qkv, null, sc, { rows: N, K: hd, M: N, sx: 3 * D, sw: 3 * D, sy: N, H, Z: B * H, xB: N * 3 * D, xH: hd,
+                                        wO: D, wB: N * 3 * D, wH: hd, yB: H * N * N, yH: N * N, scale: 1 / Math.sqrt(hd) });
+    const pv = mm(sc, qkv, null, att, { rows: N, K: N, M: hd, sx: N, sw: 3 * D, sy: D, H, Z: B * H, tw: true, xB: H * N * N, xH: N * N,
+                                        wO: 2 * D, wB: N * 3 * D, wH: hd, yB: N * D, yH: hd });
+    const ops = [], W = this.W;
+    for (let l = 0; l < m.depth; l++) {
+      const p = n => W["blocks." + l + "." + n];
+      ops.push(ln(x, p("norm1.weight"), p("norm1.bias"), h));
+      ops.push(lin(h, p("qkv.weight"), p("qkv.bias"), qkv, D, 3 * D));
+      ops.push(qk, softmax, pv);
+      ops.push(lin(att, p("proj.weight"), p("proj.bias"), x, D, D, { acc: true }));
+      ops.push(ln(x, p("norm2.weight"), p("norm2.bias"), h));
+      ops.push(lin(h, p("fc1.weight"), p("fc1.bias"), f, D, F, { relu: true }));
+      ops.push(lin(f, p("fc2.weight"), p("fc2.bias"), x, F, D, { acc: true }));
+    }
+    const pl = { x, read, ops, bytes: R * D * 4 };
+    this.cache.set(B, pl); return pl;
+  }
+  async run(X, B) {
+    const pl = this.plan(B), dev = this.dev;
+    dev.queue.writeBuffer(pl.x, 0, X);
+    const enc = dev.createCommandEncoder(), pass = enc.beginComputePass();
+    for (const op of pl.ops) { pass.setPipeline(op.pipe); pass.setBindGroup(0, op.bg); pass.dispatchWorkgroups(op.wg[0], op.wg[1], op.wg[2]); }
+    pass.end();
+    enc.copyBufferToBuffer(pl.x, 0, pl.read, 0, pl.bytes);
+    dev.queue.submit([enc.finish()]);
+    await pl.read.mapAsync(GPUMapMode.READ);
+    const out = new Float32Array(pl.read.getMappedRange().slice(0));
+    pl.read.unmap();
+    return out;
+  }
+}
+
+// ---------- 前向与采样 ----------
+async function forward(m, gpu, zs, t, txts) {
+  const B = zs.length, X = assemble(m, zs, t, txts);
+  const Y = gpu ? await gpu.run(X, B) : blocksCPU(m, X, B);
+  return head(m, Y, B);
+}
+function grid(steps, tStop) {
+  if (tStop > 0) {
+    if (steps === 1) return [1, 0];
+    const a = []; for (let i = 0; i < steps; i++) a.push(1 + (tStop - 1) * i / (steps - 1)); a.push(0); return a;
+  }
+  const a = []; for (let i = 0; i <= steps; i++) a.push(1 - i / steps); return a;
+}
+// cfg 作用于 RGB 三个通道，cfgA 作用于 alpha 通道（z 的排布是 [4,16,16]，第 768 个数之后是 alpha）
+async function generate(m, gpu, idsList, noises, steps, cfg, cfgA, tStop, onStep) {
+  const n = idsList.length, useCfg = cfg !== 1 || cfgA !== 1;
+  const condT = idsList.map(ids => textTokens(m, ids)), nullT = textTokens(m, nullIds(m.textLen));
+  const txts = useCfg ? condT.concat(new Array(n).fill(nullT)) : condT;
+  const zs = noises.map(z => Float32Array.from(z));
+  const ts = grid(steps, tStop);
+  for (let s = 0; s < ts.length - 1; s++) {
+    const t = ts[s], tn = ts[s + 1];
+    const out = await forward(m, gpu, useCfg ? zs.concat(zs) : zs, t, txts);
+    for (let b = 0; b < n; b++) {
+      const xc = out[b], z = zs[b], xu = useCfg ? out[n + b] : null, r = tn / t;
+      for (let i = 0; i < 1024; i++) {
+        const x0 = useCfg ? xu[i] + (i < 768 ? cfg : cfgA) * (xc[i] - xu[i]) : xc[i];
+        z[i] = r * z[i] + (1 - r) * x0;
+      }
+    }
+    if (onStep) await onStep(s + 1, ts.length - 1);
+  }
+  return zs.map(decode);
+}
+function decode(z) {                       // [4*256] -> 256 个调色板索引（0 透明）
+  const tok = new Int32Array(256);
+  for (let i = 0; i < 256; i++) {
+    if (z[768 + i] < 0) { tok[i] = 0; continue; }
+    const r = z[i], g = z[256 + i], b = z[512 + i]; let best = 1e9, bi = 0;
+    for (let k = 0; k < 4096; k++) {
+      const dr = r - PALETTE[3 * k], dg = g - PALETTE[3 * k + 1], db = b - PALETTE[3 * k + 2], d = dr * dr + dg * dg + db * db;
+      if (d < best) { best = d; bi = k; }
+    }
+    tok[i] = bi + 1;
+  }
+  return tok;
+}
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gaussNoise(seed, n) {
+  const rnd = mulberry32(seed), out = [];
+  for (let k = 0; k < n; k++) {
+    const z = new Float32Array(1024);
+    for (let i = 0; i < 1024; i += 2) { const u = Math.max(rnd(), 1e-12), v = rnd(), r = Math.sqrt(-2 * Math.log(u)); z[i] = r * Math.cos(2 * Math.PI * v); z[i + 1] = r * Math.sin(2 * Math.PI * v); }
+    out.push(z);
+  }
+  return out;
+}
+
+// ---------- 界面 ----------
+const $ = id => document.getElementById(id);
+const I18N = {
+  en: { sub: "Text to 16×16 pixel-art sprites with a 4.35M-parameter diffusion model. Everything runs in this browser (WebGPU, CPU fallback); nothing is uploaded. Weights are int8, compute is fp32.",
+        caption: "Caption (English; only words seen in training are known)", model: "Model", count: "Images", steps: "Steps", cfg: "Guidance", seed: "Seed",
+        tstop: "Stop grid at t = 0.05", cpu: "CPU only", go: "Generate", test: "Self-test vs PyTorch", png: "PNG",
+        s_p1: "S-P1 (1.9M, smallest)", m_p1: "M-P1 (4.35M, recommended)", l_p1: "L-P1 (8.75M, best quality)", m_p2: "M-P2 (patch 2, faster)",
+        unk: w => `Not in vocabulary: ${w.join(", ")} (ignored). `, trunc: "More than 12 words; the rest are cut. ",
+        step: (s, S) => `Step ${s}/${S}…`, err: "Error: ", loadfail: "Failed to load: ", testing: "Testing…", dl: "Downloading model…",
+        ready: g => g ? "Ready (WebGPU)" : "Ready (no WebGPU, using CPU; slower)",
+        done: (dev, n, sec, per, steps, cfg) => `${dev}: ${n} images in ${sec} s, ${per} ms each (${steps} steps, guidance ${cfg}${cfg !== 1 ? ", 2 passes per step" : ""})`,
+        fwd: (l, md) => `${l}: max abs error of one forward pass ${md}`, gen: (st, pct) => `; ${st}-step generation matches PyTorch on ${pct}% of pixels` },
+  zh: { sub: "4.35M 参数的扩散模型，从文字生成 16×16 像素图。全部在本机浏览器里计算（WebGPU，没有时退回 CPU），不上传任何内容。权重为 int8，计算为 fp32。",
+        caption: "描述（英文，训练里出现过的词才认识）", model: "模型", count: "张数", steps: "采样步数", cfg: "引导强度", seed: "随机种子",
+        tstop: "网格停在 t=0.05", cpu: "只用 CPU", go: "生成", test: "和 PyTorch 对拍", png: "下载 PNG",
+        s_p1: "S-P1（1.9M，最小）", m_p1: "M-P1（4.35M，推荐）", l_p1: "L-P1（8.75M，质量最好）", m_p2: "M-P2（patch 2，更快）",
+        unk: w => `词表里没有：${w.join("、")}（按未知词处理）。`, trunc: "超过 12 个词，后面的会被截掉。",
+        step: (s, S) => `第 ${s}/${S} 步…`, err: "出错：", loadfail: "加载失败：", testing: "对拍中…", dl: "正在下载模型…",
+        ready: g => g ? "就绪（WebGPU 可用）" : "就绪（没有 WebGPU，用 CPU，会慢一些）",
+        done: (dev, n, sec, per, steps, cfg) => `${dev}：${n} 张 ${sec} 秒，每张 ${per} ms（${steps} 步，引导 ${cfg}${cfg !== 1 ? "，每步 2 次前向" : ""}）`,
+        fwd: (l, md) => `${l}：单次前向最大绝对误差 ${md}`, gen: (st, pct) => `；${st} 步生成与 PyTorch 像素一致 ${pct}%` },
+};
+let LANG = "en";
+try { LANG = localStorage.getItem("lang") || ((navigator.language || "").startsWith("zh") ? "zh" : "en"); } catch (e) { LANG = (navigator.language || "").startsWith("zh") ? "zh" : "en"; }
+const T = k => I18N[LANG][k];
+const MODELS = [["m-p1", "m_p1"], ["l-p1", "l_p1"], ["s-p1", "s_p1"], ["m-p2", "m_p2"]];
+function applyLang() {
+  document.documentElement.lang = LANG === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = T(e.dataset.i18n); });
+  for (const o of $("model").options) o.text = T(MODELS.find(m => m[0] === o.value)[1]);
+  $("lang").textContent = LANG === "zh" ? "English" : "中文";
+}
+const EXAMPLES = ["red potion bottle", "golden key", "green slime", "wooden treasure chest", "side-view knight with sword", "blue crystal", "pink flower", "iron helmet"];
+const loaded = {}; let gpuFor = {};
+
+async function getModel(name) {
+  if (!loaded[name]) { $("status").textContent = T("dl"); loaded[name] = loadModel(name); loaded[name].catch(() => { delete loaded[name]; }); }
+  const m = await loaded[name];
+  if ($("forcecpu").checked) return [m, null];
+  if (!(name in gpuFor)) { try { gpuFor[name] = await GPUBackbone.create(m); } catch (e) { console.warn(e); gpuFor[name] = null; } }
+  return [m, gpuFor[name]];
+}
+// alpha 通道的引导：模型默认两者相同时跟着 RGB 走，否则固定用模型选定的值（L 选的是 1）
+function alphaCfg(m, cfg) { const d = m.meta.sampler || { cfg: 1.5, cfg_alpha: 1.5 }; return d.cfg_alpha === d.cfg ? cfg : d.cfg_alpha; }
+function drawTile(tok, label) {
+  const c = document.createElement("canvas"); c.width = 16; c.height = 16;
+  const ctx = c.getContext("2d"), im = ctx.createImageData(16, 16);
+  for (let i = 0; i < 256; i++) { const k = tok[i]; im.data.set([PAL_RGB[3 * k], PAL_RGB[3 * k + 1], PAL_RGB[3 * k + 2], k ? 255 : 0], 4 * i); }
+  ctx.putImageData(im, 0, 0);
+  const d = document.createElement("div"); d.className = "tile";
+  const a = document.createElement("a"); a.textContent = T("png"); a.href = c.toDataURL("image/png"); a.download = label + ".png";
+  d.append(c, a); return d;
+}
+function checkCaption() {
+  const { unknown, truncated } = tokenize($("caption").value, TEXT_LEN);
+  $("warn").textContent = (unknown.length ? T("unk")(unknown) : "") + (truncated ? T("trunc") : "");
+}
+async function run() {
+  $("go").disabled = true;
+  try {
+    const name = $("model").value, [m, gpu] = await getModel(name);
+    const n = Math.max(1, Math.min(32, +$("count").value | 0)), steps = Math.max(1, Math.min(100, +$("steps").value | 0));
+    const cfg = +$("cfg").value || 1, seed = +$("seed").value | 0, tStop = $("tstop").checked ? 0.05 : 0;
+    const { ids } = tokenize($("caption").value, m.textLen);
+    const t0 = performance.now();
+    const toks = await generate(m, gpu, new Array(n).fill(ids), gaussNoise(seed, n), steps, cfg, alphaCfg(m, cfg), tStop,
+      async (s, S) => { $("status").textContent = T("step")(s, S); await new Promise(r => setTimeout(r, 0)); });
+    const ms = performance.now() - t0;
+    $("grid").replaceChildren(...toks.map((t, i) => drawTile(t, `${name}-seed${seed}-${i}`)));
+    $("status").textContent = T("done")(gpu ? "WebGPU" : "CPU", n, (ms / 1000).toFixed(2), (ms / n).toFixed(0), steps, cfg);
+  } catch (e) { $("status").textContent = T("err") + e.message; console.error(e); }
+  $("go").disabled = false;
+}
+async function selfTest() {
+  $("test").disabled = true; $("testout").textContent = T("testing");
+  try {
+    const name = $("model").value, [m, gpu] = await getModel(name), TV = await assetJSON(name + "-test.json"), n = TV.ids.length;
+    const noises = []; for (let b = 0; b < n; b++) noises.push(Float32Array.from(TV.noise.slice(b * 1024, (b + 1) * 1024)));
+    const lines = [], oks = [];
+    for (const [label, g] of [["CPU", null]].concat(gpu ? [["WebGPU", gpu]] : [])) {
+      const out = await forward(m, g, noises, TV.t, TV.ids.map(ids => textTokens(m, ids)));
+      let md = 0; out.forEach((x, b) => x.forEach((v, i) => { md = Math.max(md, Math.abs(v - TV.x_half[b * 1024 + i])); }));
+      let ok = md < 1e-3;
+      if (g || !gpu) {                    // 有 WebGPU 时 CPU 只对拍单次前向（CPU 跑完整生成要近一分钟）
+        const toks = await generate(m, g, TV.ids, noises, TV.steps, TV.cfg, TV.cfg_alpha ?? TV.cfg, 0);
+        let same = 0; toks.forEach((tk, b) => tk.forEach((v, i) => { same += v === TV.tokens[b][i]; }));
+        ok = ok && same / (256 * n) >= 0.95;
+        lines.push(T("fwd")(label, md.toExponential(2)) + T("gen")(TV.steps, (100 * same / (256 * n)).toFixed(1)));
+      } else lines.push(T("fwd")(label, md.toExponential(2)));
+      oks.push(ok);
+    }
+    $("testout").innerHTML = lines.map((l, k) => `<span class="${oks[k] ? "ok" : "bad"}">${l}</span>`).join("\n");
+  } catch (e) { $("testout").textContent = T("err") + e.message; console.error(e); }
+  $("test").disabled = false;
+}
+
+(async function init() {
+  try {
+    VOCAB = await assetJSON("vocab.json");
+    PAL_RGB = new Uint8Array(await assetBin("palette.bin"));
+    PALETTE = new Float32Array(4096 * 3);
+    for (let i = 0; i < 4096 * 3; i++) PALETTE[i] = PAL_RGB[3 + i] / 127.5 - 1;
+    const have = window.EMBED ? Object.keys(window.EMBED).filter(k => /^[a-z0-9-]+\.json$/.test(k) && k !== "vocab.json").map(k => k.slice(0, -5))
+                              : await assetJSON("models.json");
+    for (const [v, t] of MODELS) if (have.includes(v)) $("model").add(new Option(t, v));
+    EXAMPLES.forEach(e => { const b = document.createElement("button"); b.className = "chip"; b.textContent = e; b.onclick = () => { $("caption").value = e; checkCaption(); }; $("examples").append(b); });
+    $("caption").addEventListener("input", checkCaption);
+    $("model").addEventListener("change", () => { checkCaption(); getModel($("model").value).then(() => { $("status").textContent = T("ready")(!!navigator.gpu); }, e => { $("status").textContent = T("loadfail") + e.message; }); });
+    $("caption").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
+    $("go").onclick = run; $("test").onclick = selfTest;
+    $("lang").onclick = () => { LANG = LANG === "zh" ? "en" : "zh"; try { localStorage.setItem("lang", LANG); } catch (e) {} applyLang(); checkCaption(); $("status").textContent = T("ready")(!!navigator.gpu); };
+    const gh = location.hostname.match(/^([^.]+)\.github\.io$/);
+    $("repo").href = gh ? `https://github.com/${gh[1]}/${location.pathname.split("/")[1] || "mini-pixel-art"}` : "https://github.com/";
+    applyLang(); checkCaption();
+    $("status").textContent = T("ready")(!!navigator.gpu);
+  } catch (e) { $("status").textContent = T("loadfail") + e.message; }
+})();
+</script>
+</body>
+</html>

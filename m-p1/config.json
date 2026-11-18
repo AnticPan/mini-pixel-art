@@ -1,0 +1,19 @@
+{
+ "model": {
+  "n_vocab": 10947,
+  "width": 192,
+  "depth": 8,
+  "heads": 4,
+  "patch": 1,
+  "mlp_ratio": 4,
+  "text_dim": 64
+ },
+ "sampler": {
+  "steps": 16,
+  "cfg": 1.5,
+  "cfg_alpha": 1.5,
+  "t_stop": 0.05
+ },
+ "params": 4350532,
+ "train_step": 300000
+}
